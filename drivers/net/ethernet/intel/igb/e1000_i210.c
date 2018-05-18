@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /* Intel(R) Gigabit Ethernet Linux driver
  * Copyright(c) 2007-2014 Intel Corporation.
  *
@@ -699,9 +700,9 @@ static s32 igb_update_flash_i210(struct e1000_hw *hw)
 
 	ret_val = igb_pool_flash_update_done_i210(hw);
 	if (ret_val)
-		hw_dbg("Flash update complete\n");
-	else
 		hw_dbg("Flash update time out\n");
+	else
+		hw_dbg("Flash update complete\n");
 
 out:
 	return ret_val;

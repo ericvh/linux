@@ -781,7 +781,7 @@ static int hash_process_data(struct hash_device_data *device_data,
 						&device_data->state);
 				memmove(req_ctx->state.buffer,
 					device_data->state.buffer,
-					HASH_BLOCK_SIZE / sizeof(u32));
+					HASH_BLOCK_SIZE);
 				if (ret) {
 					dev_err(device_data->dev,
 						"%s: hash_resume_state() failed!\n",
@@ -832,7 +832,7 @@ static int hash_process_data(struct hash_device_data *device_data,
 
 			memmove(device_data->state.buffer,
 				req_ctx->state.buffer,
-				HASH_BLOCK_SIZE / sizeof(u32));
+				HASH_BLOCK_SIZE);
 			if (ret) {
 				dev_err(device_data->dev, "%s: hash_save_state() failed!\n",
 					__func__);
@@ -1403,6 +1403,16 @@ out:
 	return ret1 ? ret1 : ret2;
 }
 
+static int ahash_noimport(struct ahash_request *req, const void *in)
+{
+	return -ENOSYS;
+}
+
+static int ahash_noexport(struct ahash_request *req, void *out)
+{
+	return -ENOSYS;
+}
+
 static int hmac_sha1_init(struct ahash_request *req)
 {
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
@@ -1507,6 +1517,8 @@ static struct hash_algo_template hash_algs[] = {
 			.update = ahash_update,
 			.final = ahash_final,
 			.digest = ahash_sha1_digest,
+			.export = ahash_noexport,
+			.import = ahash_noimport,
 			.halg.digestsize = SHA1_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct hash_ctx),
 			.halg.base = {
@@ -1529,6 +1541,8 @@ static struct hash_algo_template hash_algs[] = {
 			.update	= ahash_update,
 			.final = ahash_final,
 			.digest = ahash_sha256_digest,
+			.export = ahash_noexport,
+			.import = ahash_noimport,
 			.halg.digestsize = SHA256_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct hash_ctx),
 			.halg.base = {
@@ -1553,6 +1567,8 @@ static struct hash_algo_template hash_algs[] = {
 			.final = ahash_final,
 			.digest = hmac_sha1_digest,
 			.setkey = hmac_sha1_setkey,
+			.export = ahash_noexport,
+			.import = ahash_noimport,
 			.halg.digestsize = SHA1_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct hash_ctx),
 			.halg.base = {
@@ -1577,6 +1593,8 @@ static struct hash_algo_template hash_algs[] = {
 			.final = ahash_final,
 			.digest = hmac_sha256_digest,
 			.setkey = hmac_sha256_setkey,
+			.export = ahash_noexport,
+			.import = ahash_noimport,
 			.halg.digestsize = SHA256_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct hash_ctx),
 			.halg.base = {
@@ -1659,9 +1677,9 @@ static int ux500_hash_probe(struct platform_device *pdev)
 
 	device_data->phybase = res->start;
 	device_data->base = devm_ioremap_resource(dev, res);
-	if (!device_data->base) {
+	if (IS_ERR(device_data->base)) {
 		dev_err(dev, "%s: ioremap() failed!\n", __func__);
-		ret = -ENOMEM;
+		ret = PTR_ERR(device_data->base);
 		goto out;
 	}
 	spin_lock_init(&device_data->ctx_lock);

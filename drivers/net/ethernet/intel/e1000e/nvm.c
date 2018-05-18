@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /* Intel PRO/1000 Linux driver
  * Copyright(c) 1999 - 2015 Intel Corporation.
  *
@@ -67,7 +68,7 @@ static void e1000_shift_out_eec_bits(struct e1000_hw *hw, u16 data, u16 count)
 	u32 eecd = er32(EECD);
 	u32 mask;
 
-	mask = 0x01 << (count - 1);
+	mask = BIT(count - 1);
 	if (nvm->type == e1000_nvm_eeprom_spi)
 		eecd |= E1000_EECD_DO;
 

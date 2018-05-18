@@ -1,5 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 #ifndef _ASM_POWERPC_FTRACE
 #define _ASM_POWERPC_FTRACE
+
+#include <asm/types.h>
 
 #ifdef CONFIG_FUNCTION_TRACER
 #define MCOUNT_ADDR		((unsigned long)(_mcount))
@@ -46,6 +49,8 @@
 extern void _mcount(void);
 
 #ifdef CONFIG_DYNAMIC_FTRACE
+# define FTRACE_ADDR ((unsigned long)ftrace_caller)
+# define FTRACE_REGS_ADDR FTRACE_ADDR
 static inline unsigned long ftrace_call_adjust(unsigned long addr)
 {
        /* reloction of mcount call site is the same as the address */
@@ -58,22 +63,38 @@ struct dyn_arch_ftrace {
 #endif /*  CONFIG_DYNAMIC_FTRACE */
 #endif /* __ASSEMBLY__ */
 
+#ifdef CONFIG_DYNAMIC_FTRACE_WITH_REGS
+#define ARCH_SUPPORTS_FTRACE_OPS 1
+#endif
 #endif
 
-#if defined(CONFIG_FTRACE_SYSCALLS) && defined(CONFIG_PPC64) && !defined(__ASSEMBLY__)
-#if !defined(_CALL_ELF) || _CALL_ELF != 2
+#if defined(CONFIG_FTRACE_SYSCALLS) && !defined(__ASSEMBLY__)
+/*
+ * Some syscall entry functions on powerpc start with "ppc_" (fork and clone,
+ * for instance) or ppc32_/ppc64_. We should also match the sys_ variant with
+ * those.
+ */
 #define ARCH_HAS_SYSCALL_MATCH_SYM_NAME
+#ifdef PPC64_ELF_ABI_v1
 static inline bool arch_syscall_match_sym_name(const char *sym, const char *name)
 {
-	/*
-	 * Compare the symbol name with the system call name. Skip the .sys or .SyS
-	 * prefix from the symbol name and the sys prefix from the system call name and
-	 * just match the rest. This is only needed on ppc64 since symbol names on
-	 * 32bit do not start with a period so the generic function will work.
-	 */
-	return !strcmp(sym + 4, name + 3);
+	/* We need to skip past the initial dot, and the __se_sys alias */
+	return !strcmp(sym + 1, name) ||
+		(!strncmp(sym, ".__se_sys", 9) && !strcmp(sym + 6, name)) ||
+		(!strncmp(sym, ".ppc_", 5) && !strcmp(sym + 5, name + 4)) ||
+		(!strncmp(sym, ".ppc32_", 7) && !strcmp(sym + 7, name + 4)) ||
+		(!strncmp(sym, ".ppc64_", 7) && !strcmp(sym + 7, name + 4));
+}
+#else
+static inline bool arch_syscall_match_sym_name(const char *sym, const char *name)
+{
+	return !strcmp(sym, name) ||
+		(!strncmp(sym, "__se_sys", 8) && !strcmp(sym + 5, name)) ||
+		(!strncmp(sym, "ppc_", 4) && !strcmp(sym + 4, name + 4)) ||
+		(!strncmp(sym, "ppc32_", 6) && !strcmp(sym + 6, name + 4)) ||
+		(!strncmp(sym, "ppc64_", 6) && !strcmp(sym + 6, name + 4));
 }
 #endif
-#endif /* CONFIG_FTRACE_SYSCALLS && CONFIG_PPC64 && !__ASSEMBLY__ */
+#endif /* CONFIG_FTRACE_SYSCALLS && !__ASSEMBLY__ */
 
 #endif /* _ASM_POWERPC_FTRACE */

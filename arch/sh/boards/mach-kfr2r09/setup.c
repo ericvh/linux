@@ -11,7 +11,6 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/mmc/host.h>
-#include <linux/mmc/sh_mobile_sdhi.h>
 #include <linux/mfd/tmio.h>
 #include <linux/mtd/physmap.h>
 #include <linux/mtd/onenand.h>
@@ -376,8 +375,8 @@ static struct resource kfr2r09_sh_sdhi0_resources[] = {
 static struct tmio_mmc_data sh7724_sdhi0_data = {
 	.chan_priv_tx	= (void *)SHDMA_SLAVE_SDHI0_TX,
 	.chan_priv_rx	= (void *)SHDMA_SLAVE_SDHI0_RX,
-	.flags		= TMIO_MMC_WRPROTECT_DISABLE,
 	.capabilities	= MMC_CAP_SDIO_IRQ,
+	.capabilities2	= MMC_CAP2_NO_WRITE_PROTECT,
 };
 
 static struct platform_device kfr2r09_sh_sdhi0_device = {

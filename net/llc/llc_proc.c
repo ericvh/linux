@@ -195,7 +195,7 @@ static int llc_seq_core_show(struct seq_file *seq, void *v)
 		   timer_pending(&llc->pf_cycle_timer.timer),
 		   timer_pending(&llc->rej_sent_timer.timer),
 		   timer_pending(&llc->busy_state_timer.timer),
-		   !!sk->sk_backlog.tail, !!sock_owned_by_user(sk));
+		   !!sk->sk_backlog.tail, !!sk->sk_lock.owned);
 out:
 	return 0;
 }
@@ -225,7 +225,6 @@ static int llc_seq_core_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations llc_seq_socket_fops = {
-	.owner		= THIS_MODULE,
 	.open		= llc_seq_socket_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
@@ -233,7 +232,6 @@ static const struct file_operations llc_seq_socket_fops = {
 };
 
 static const struct file_operations llc_seq_core_fops = {
-	.owner		= THIS_MODULE,
 	.open		= llc_seq_core_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
@@ -251,11 +249,11 @@ int __init llc_proc_init(void)
 	if (!llc_proc_dir)
 		goto out;
 
-	p = proc_create("socket", S_IRUGO, llc_proc_dir, &llc_seq_socket_fops);
+	p = proc_create("socket", 0444, llc_proc_dir, &llc_seq_socket_fops);
 	if (!p)
 		goto out_socket;
 
-	p = proc_create("core", S_IRUGO, llc_proc_dir, &llc_seq_core_fops);
+	p = proc_create("core", 0444, llc_proc_dir, &llc_seq_core_fops);
 	if (!p)
 		goto out_core;
 

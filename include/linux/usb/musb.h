@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * This is used to for host and peripheral modes of the driver for
  * Inventra (Multidrop) Highspeed Dual-Role Controllers:  (M)HDRC.
@@ -88,13 +89,6 @@ struct musb_hdrc_config {
 	u8		ram_bits;	/* ram address size */
 
 	struct musb_hdrc_eps_bits *eps_bits __deprecated;
-#ifdef CONFIG_BLACKFIN
-	/* A GPIO controlling VRSEL in Blackfin */
-	unsigned int	gpio_vrsel;
-	unsigned int	gpio_vrsel_active;
-	/* musb CLKIN in Blackfin in MHZ */
-	unsigned char   clkin;
-#endif
 	u32		maximum_speed;
 };
 
@@ -124,7 +118,7 @@ struct musb_hdrc_platform_data {
 	int		(*set_power)(int state);
 
 	/* MUSB configuration-specific details */
-	struct musb_hdrc_config	*config;
+	const struct musb_hdrc_config *config;
 
 	/* Architecture specific board data	*/
 	void		*board_data;
@@ -142,10 +136,11 @@ enum musb_vbus_id_status {
 };
 
 #if IS_ENABLED(CONFIG_USB_MUSB_HDRC)
-void musb_mailbox(enum musb_vbus_id_status status);
+int musb_mailbox(enum musb_vbus_id_status status);
 #else
-static inline void musb_mailbox(enum musb_vbus_id_status status)
+static inline int musb_mailbox(enum musb_vbus_id_status status)
 {
+	return 0;
 }
 #endif
 

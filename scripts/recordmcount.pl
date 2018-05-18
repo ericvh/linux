@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 # (c) 2008, Steven Rostedt <srostedt@redhat.com>
 # Licensed under the terms of the GNU GPL License version 2
 #
@@ -106,6 +106,7 @@
 # 9) Move the result back to the original object.
 #
 
+use warnings;
 use strict;
 
 my $P = $0;
@@ -130,11 +131,14 @@ if ($inputfile =~ m,kernel/trace/ftrace\.o$,) {
 # Acceptable sections to record.
 my %text_sections = (
      ".text" => 1,
+     ".init.text" => 1,
      ".ref.text" => 1,
      ".sched.text" => 1,
      ".spinlock.text" => 1,
      ".irqentry.text" => 1,
+     ".softirqentry.text" => 1,
      ".kprobes.text" => 1,
+     ".cpuidle.text" => 1,
      ".text.unlikely" => 1,
 );
 
@@ -316,7 +320,7 @@ if ($arch eq "x86_64") {
     # instruction or the addiu one. herein, we record the address of the
     # first one, and then we can replace this instruction by a branch
     # instruction to jump over the profiling function to filter the
-    # indicated functions, or swith back to the lui instruction to trace
+    # indicated functions, or switch back to the lui instruction to trace
     # them, which means dynamic tracing.
     #
     #       c:	3c030000 	lui	v1,0x0
@@ -364,14 +368,11 @@ if ($arch eq "x86_64") {
 } elsif ($arch eq "microblaze") {
     # Microblaze calls '_mcount' instead of plain 'mcount'.
     $mcount_regex = "^\\s*([0-9a-fA-F]+):.*\\s_mcount\$";
-} elsif ($arch eq "blackfin") {
-    $mcount_regex = "^\\s*([0-9a-fA-F]+):.*\\s__mcount\$";
-    $mcount_adjust = -4;
-} elsif ($arch eq "tilegx" || $arch eq "tile") {
-    # Default to the newer TILE-Gx architecture if only "tile" is given.
-    $mcount_regex = "^\\s*([0-9a-fA-F]+):.*\\s__mcount\$";
+} elsif ($arch eq "riscv") {
+    $function_regex = "^([0-9a-fA-F]+)\\s+<([^.0-9][0-9a-zA-Z_\\.]+)>:";
+    $mcount_regex = "^\\s*([0-9a-fA-F]+):\\sR_RISCV_CALL\\s_mcount\$";
     $type = ".quad";
-    $alignment = 8;
+    $alignment = 2;
 } else {
     die "Arch $arch is not supported with CONFIG_FTRACE_MCOUNT_RECORD";
 }

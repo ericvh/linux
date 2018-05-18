@@ -309,8 +309,6 @@ static void ushc_request(struct mmc_host *mmc, struct mmc_request *req)
 
 	/* Submit CSW. */
 	ret = usb_submit_urb(ushc->csw_urb, GFP_ATOMIC);
-	if (ret < 0)
-		goto out;
 
 out:
 	spin_unlock_irqrestore(&ushc->lock, flags);
@@ -425,6 +423,9 @@ static int ushc_probe(struct usb_interface *intf, const struct usb_device_id *id
 	struct mmc_host *mmc;
 	struct ushc_data *ushc;
 	int ret;
+
+	if (intf->cur_altsetting->desc.bNumEndpoints < 1)
+		return -ENODEV;
 
 	mmc = mmc_alloc_host(sizeof(struct ushc_data), &intf->dev);
 	if (mmc == NULL)

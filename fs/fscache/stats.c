@@ -21,7 +21,6 @@
 atomic_t fscache_n_op_pend;
 atomic_t fscache_n_op_run;
 atomic_t fscache_n_op_enqueue;
-atomic_t fscache_n_op_requeue;
 atomic_t fscache_n_op_deferred_release;
 atomic_t fscache_n_op_initialised;
 atomic_t fscache_n_op_release;
@@ -295,7 +294,6 @@ static int fscache_stats_open(struct inode *inode, struct file *file)
 }
 
 const struct file_operations fscache_stats_fops = {
-	.owner		= THIS_MODULE,
 	.open		= fscache_stats_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,

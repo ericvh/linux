@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * GPL HEADER START
  *
@@ -15,11 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -36,10 +33,10 @@
 
 #define DEBUG_SUBSYSTEM S_RPC
 
-#include "../include/obd_support.h"
-#include "../include/obd_class.h"
-#include "../include/lustre_net.h"
-#include "../include/lustre_req_layout.h"
+#include <obd_support.h>
+#include <obd_class.h>
+#include <lustre_net.h>
+#include <lustre_req_layout.h>
 
 #include "ptlrpc_internal.h"
 
@@ -47,6 +44,42 @@ extern spinlock_t ptlrpc_last_xid_lock;
 #if RS_DEBUG
 extern spinlock_t ptlrpc_rs_debug_lock;
 #endif
+
+DEFINE_MUTEX(ptlrpc_startup);
+static int ptlrpc_active = 0;
+
+int ptlrpc_inc_ref(void)
+{
+	int rc = 0;
+
+	mutex_lock(&ptlrpc_startup);
+	if (ptlrpc_active++ == 0) {
+		ptlrpc_put_connection_superhack = ptlrpc_connection_put;
+
+		rc = ptlrpc_init_portals();
+		if (!rc) {
+			rc= ptlrpc_start_pinger();
+			if (rc)
+				ptlrpc_exit_portals();
+		}
+		if (rc)
+			ptlrpc_active--;
+	}
+	mutex_unlock(&ptlrpc_startup);
+	return rc;
+}
+EXPORT_SYMBOL(ptlrpc_inc_ref);
+
+void ptlrpc_dec_ref(void)
+{
+	mutex_lock(&ptlrpc_startup);
+	if (--ptlrpc_active == 0) {
+		ptlrpc_stop_pinger();
+		ptlrpc_exit_portals();
+	}
+	mutex_unlock(&ptlrpc_startup);
+}
+EXPORT_SYMBOL(ptlrpc_dec_ref);
 
 static int __init ptlrpc_init(void)
 {
@@ -74,21 +107,9 @@ static int __init ptlrpc_init(void)
 	if (rc)
 		goto cleanup;
 
-	cleanup_phase = 2;
-	rc = ptlrpc_init_portals();
-	if (rc)
-		goto cleanup;
-
 	cleanup_phase = 3;
 
 	rc = ptlrpc_connection_init();
-	if (rc)
-		goto cleanup;
-
-	cleanup_phase = 4;
-	ptlrpc_put_connection_superhack = ptlrpc_connection_put;
-
-	rc = ptlrpc_start_pinger();
 	if (rc)
 		goto cleanup;
 
@@ -125,15 +146,9 @@ cleanup:
 		ldlm_exit();
 		/* Fall through */
 	case 5:
-		ptlrpc_stop_pinger();
-		/* Fall through */
-	case 4:
 		ptlrpc_connection_fini();
 		/* Fall through */
 	case 3:
-		ptlrpc_exit_portals();
-		/* Fall through */
-	case 2:
 		ptlrpc_request_cache_fini();
 		/* Fall through */
 	case 1:
@@ -153,8 +168,6 @@ static void __exit ptlrpc_exit(void)
 	ptlrpc_nrs_fini();
 	sptlrpc_fini();
 	ldlm_exit();
-	ptlrpc_stop_pinger();
-	ptlrpc_exit_portals();
 	ptlrpc_request_cache_fini();
 	ptlrpc_hr_fini();
 	ptlrpc_connection_fini();
@@ -162,8 +175,8 @@ static void __exit ptlrpc_exit(void)
 
 MODULE_AUTHOR("OpenSFS, Inc. <http://www.lustre.org/>");
 MODULE_DESCRIPTION("Lustre Request Processor and Lock Management");
+MODULE_VERSION(LUSTRE_VERSION_STRING);
 MODULE_LICENSE("GPL");
-MODULE_VERSION("1.0.0");
 
 module_init(ptlrpc_init);
 module_exit(ptlrpc_exit);

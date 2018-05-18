@@ -1,19 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2013 Fusion IO.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License v2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
  */
 
 #include <linux/slab.h>
@@ -22,10 +9,11 @@
 #include "../extent_io.h"
 #include "../disk-io.h"
 
-static int test_btrfs_split_item(void)
+static int test_btrfs_split_item(u32 sectorsize, u32 nodesize)
 {
-	struct btrfs_path *path;
-	struct btrfs_root *root;
+	struct btrfs_fs_info *fs_info;
+	struct btrfs_path *path = NULL;
+	struct btrfs_root *root = NULL;
 	struct extent_buffer *eb;
 	struct btrfs_item *item;
 	char *value = "mary had a little lamb";
@@ -40,20 +28,27 @@ static int test_btrfs_split_item(void)
 
 	test_msg("Running btrfs_split_item tests\n");
 
-	root = btrfs_alloc_dummy_root();
+	fs_info = btrfs_alloc_dummy_fs_info(nodesize, sectorsize);
+	if (!fs_info) {
+		test_msg("Could not allocate fs_info\n");
+		return -ENOMEM;
+	}
+
+	root = btrfs_alloc_dummy_root(fs_info);
 	if (IS_ERR(root)) {
 		test_msg("Could not allocate root\n");
-		return PTR_ERR(root);
+		ret = PTR_ERR(root);
+		goto out;
 	}
 
 	path = btrfs_alloc_path();
 	if (!path) {
 		test_msg("Could not allocate path\n");
-		kfree(root);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto out;
 	}
 
-	path->nodes[0] = eb = alloc_dummy_extent_buffer(NULL, 4096);
+	path->nodes[0] = eb = alloc_dummy_extent_buffer(fs_info, nodesize);
 	if (!eb) {
 		test_msg("Could not allocate dummy buffer\n");
 		ret = -ENOMEM;
@@ -218,12 +213,13 @@ static int test_btrfs_split_item(void)
 	}
 out:
 	btrfs_free_path(path);
-	kfree(root);
+	btrfs_free_dummy_root(root);
+	btrfs_free_dummy_fs_info(fs_info);
 	return ret;
 }
 
-int btrfs_test_extent_buffer_operations(void)
+int btrfs_test_extent_buffer_operations(u32 sectorsize, u32 nodesize)
 {
-	test_msg("Running extent buffer operation tests");
-	return test_btrfs_split_item();
+	test_msg("Running extent buffer operation tests\n");
+	return test_btrfs_split_item(sectorsize, nodesize);
 }

@@ -17,7 +17,7 @@
 	model = "Freescale i.MX53 Automotive Reference Design Board";
 	compatible = "fsl,imx53-ard", "fsl,imx53";
 
-	memory {
+	memory@70000000 {
 		reg = <0x70000000 0x40000000>;
 	};
 
@@ -69,21 +69,21 @@
 			label = "Home";
 			gpios = <&gpio5 10 0>;
 			linux,code = <102>; /* KEY_HOME */
-			gpio-key,wakeup;
+			wakeup-source;
 		};
 
 		back {
 			label = "Back";
 			gpios = <&gpio5 11 0>;
 			linux,code = <158>; /* KEY_BACK */
-			gpio-key,wakeup;
+			wakeup-source;
 		};
 
 		program {
 			label = "Program";
 			gpios = <&gpio5 12 0>;
 			linux,code = <362>; /* KEY_PROGRAM */
-			gpio-key,wakeup;
+			wakeup-source;
 		};
 
 		volume-up {
